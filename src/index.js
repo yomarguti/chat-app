@@ -2,6 +2,9 @@ const app = require("./app");
 const socketio = require("socket.io");
 const Filter = require("bad-words");
 
+require("./db/mongoose");
+const User = require("./models/users");
+
 const {
   generateMessage,
   generateLocationMessage,
@@ -19,24 +22,30 @@ const PORT = process.env.PORT || 3000;
 const io = socketio(app);
 
 io.on("connection", (socket) => {
-  socket.on("join", (options, cb) => {
-    const { error, user } = addUser({ id: socket.id, ...options });
+  socket.on("join", async (options, cb) => {
+    try {
+      const user = await User.create({ socketId: socket.id, ...options });
+      const usersInRoom = await User.find({ room: user.room });
 
-    if (error) {
-      return cb(error);
+      socket.join(user.room);
+
+      socket.emit("message", generateMessage("Admin", "Welcome!"));
+      socket.broadcast
+        .to(user.room)
+        .emit(
+          "message",
+          generateMessage("Admin", `${user.username} has joined`)
+        );
+
+      io.to(user.room).emit("roomData", {
+        room: user.room,
+        users: usersInRoom,
+      });
+
+      cb();
+    } catch (error) {
+      cb(error.message);
     }
-
-    socket.join(user.room);
-
-    socket.emit("message", generateMessage("Admin", "Welcome!"));
-    socket.broadcast
-      .to(user.room)
-      .emit("message", generateMessage("Admin", `${user.username} has joined`));
-    io.to(user.room).emit("roomData", {
-      room: user.room,
-      users: getUsersInRoom(user.room),
-    });
-    cb();
   });
 
   socket.on("sendMessage", (message, cb) => {
@@ -64,17 +73,21 @@ io.on("connection", (socket) => {
     cb();
   });
 
-  socket.on("disconnect", () => {
-    const usrRemoved = removeUser(socket.id);
-    if (usrRemoved) {
-      io.to(usrRemoved.room).emit(
-        "message",
-        generateMessage("Admin", `${usrRemoved.username} has left`)
-      );
-      io.to(usrRemoved.room).emit("roomData", {
-        room: usrRemoved.room,
-        users: getUsersInRoom(usrRemoved.room),
-      });
+  socket.on("disconnect", async () => {
+    try {
+      const usrRemoved = await User.findOneAndRemove({ socketId: socket.id });
+      if (usrRemoved) {
+        io.to(usrRemoved.room).emit(
+          "message",
+          generateMessage("Admin", `${usrRemoved.username} has left`)
+        );
+        io.to(usrRemoved.room).emit("roomData", {
+          room: usrRemoved.room,
+          users: getUsersInRoom(usrRemoved.room),
+        });
+      }
+    } catch (error) {
+      console.log(error);
     }
   });
 });
