@@ -48,29 +48,39 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("sendMessage", (message, cb) => {
-    const usr = getUser(socket.id);
-    const filter = new Filter();
+  socket.on("sendMessage", async (message, cb) => {
+    try {
+      const user = await User.findOne({ socketId: socket.id });
 
-    if (filter.isProfane(message)) {
-      return cb("Profanity is not allow");
+      const filter = new Filter();
+      if (filter.isProfane(message)) {
+        return cb("Profanity is not allow");
+      }
+
+      io.to(user.room).emit("message", generateMessage(user.username, message));
+
+      cb();
+    } catch (error) {
+      return cb("Internal server error");
     }
-
-    io.to(usr.room).emit("message", generateMessage(usr.username, message));
-    cb();
   });
 
-  socket.on("sendLocation", ({ lat, lon }, cb) => {
-    const usr = getUser(socket.id);
+  socket.on("sendLocation", async ({ lat, lon }, cb) => {
+    try {
+      const user = await User.findOne({ socketId: socket.id });
 
-    io.to(usr.room).emit(
-      "locationMessage",
-      generateLocationMessage(
-        usr.username,
-        `https://google.com/maps?q=${lat},${lon}`
-      )
-    );
-    cb();
+      io.to(user.room).emit(
+        "locationMessage",
+        generateLocationMessage(
+          user.username,
+          `https://google.com/maps?q=${lat},${lon}`
+        )
+      );
+
+      cb();
+    } catch (error) {
+      return cb("Internal server error");
+    }
   });
 
   socket.on("disconnect", async () => {
