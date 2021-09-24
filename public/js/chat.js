@@ -41,6 +41,11 @@ const autoScroll = () => {
   }
 };
 
+document.getElementById("exit-room").addEventListener("click", () => {
+  socket.disconnect();
+  location.href = "/";
+});
+
 socket.on("message", ({ username, text: message, createdAt }) => {
   const html = Mustache.render(messageTemplate, {
     username,
@@ -63,7 +68,7 @@ socket.on("locationMessage", ({ username, url: locationURL, createdAt }) => {
 
 socket.on("roomData", ({ room, users }) => {
   const html = Mustache.render(sidebarTemplate, { room, users });
-  document.getElementById("sidebar").innerHTML = html;
+  document.getElementById("room-data-container").innerHTML = html;
 });
 
 chatForm.addEventListener("submit", (event) => {

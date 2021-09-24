@@ -22,6 +22,13 @@ const PORT = process.env.PORT || 3000;
 const io = socketio(app);
 
 io.on("connection", (socket) => {
+  socket.on("listRooms", async () => {
+    const users = await User.find({});
+    const rooms = [...new Set(users.map((usr) => usr.room))];
+
+    socket.emit("activeRooms", { rooms });
+  });
+
   socket.on("join", async (options, cb) => {
     try {
       const user = await User.create({ socketId: socket.id, ...options });

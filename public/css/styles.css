@@ -90,6 +90,9 @@ button:disabled {
 }
 
 .chat__sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     height: 100vh;
     color: white;
     background: #333744;
@@ -180,4 +183,14 @@ button:disabled {
     list-style-type: none;
     font-weight: 300;
     padding: 12px 24px 0 24px;
+}
+
+#exit-room {
+    margin: 10px auto;
+    background-color: #ef4444;
+}
+
+#exit-room:hover {
+    margin: 10px auto;
+    background-color: #dc2626;
 }
